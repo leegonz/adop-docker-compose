@@ -314,88 +314,57 @@
               "",
               [
                 "#!/bin/bash -e\n",
-                "export IP=$(hostname --ip-address)\n",
                 "sleep 10\n",
-                "yum -y install git\n",
-                "mkdir -p /data && chmod 775 /data\n",
-                "cd /data && git clone https://github.com/bzon/adop-docker-compose.git && chmod 700 /data/adop-docker-compose\n",
-                "cd /data/adop-docker-compose\n",
-                "install/centos/install_docker.sh\n",
+                
+                "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+                "[dockerrepo]\n",
+                "name=Docker Repository\n",
+                "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+                "enabled=1\n",
+                "gpgcheck=1\n",
+                "gpgkey=https://yum.dockerproject.org/gpg\n",
+                "EOF\n",
+                
+                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+                "\n",
+                "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
+                "[Unit]\n",
+                "Description=Docker Application Container Engine\n",
+                "Documentation=https://docs.docker.com\n",
+                "After=network.target docker.socket\n",
+                "Requires=docker.socket\n",
+                "\n",
+                "[Service]\n",
+                "Type=notify\n",
+                "EnvironmentFile=-/etc/sysconfig/docker\n",
+                "ExecStart=\n",
+                "ExecStart=/usr/bin/docker daemon $DOCKER_OPTS\n",
+                "MountFlags=slave\n",
+                "LimitNOFILE=1048576\n",
+                "LimitNPROC=1048576\n",
+                "LimitCORE=infinity\n",
+                "TimeoutStartSec=0\n",
+                "\n",
+                "[Install]\n",
+                "WantedBy=multi-user.target\n",
+                "EOF\n",
+
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
                 "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
                 "EOF\n",
+                
                 "systemctl daemon-reload\n",
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
-                "docker run --restart=always --name swarm-leader -d -p 4000:4000 --restart=always swarm manage -H :4000 --replication --advertise $(hostname -i):4000 consul://10.10.1.100:8500\n",
-                "docker network create --driver overlay --subnet=192.168.0.0/24 adop-network-overlay\n",
                 
-                "sleep 5\n",
-                "echo \"ADOP extensions start here...\"\n",
-                "export PUBLIC_IP=$(curl http://instance-data/latest/meta-data/public-ipv4)\n",
-                "echo \"\n",
-                "export PUBLIC_IP=$PUBLIC_IP\n",
-                "export TARGET_HOST=$PUBLIC_IP\n",
-                "export LOGSTASH_HOST=$PUBLIC_IP\n",
-                "export VOLUME_DRIVER=local\n",
-                "export CUSTOM_NETWORK_NAME=adop-network-overlay\n",
-                "export AWS_REGION=",
-                {
-                  "Ref": "AWS::Region"
-                },
-                "\n",
-                "export VPC_ID=",
-                {
-                  "Ref": "Vpc"
-                },
-                "\n",
-                "export DEFAULT_PUBLIC_SUBNET_ID=",
-                {
-                  "Ref": "PublicSubnet"
-                },
-                "\n",
-                "export DEFAULT_PRIVATE_SUBNET_ID=",
-                {
-                  "Ref": "PrivateSubnet"
-                },
-                "\n",
-                "export DEFAULT_RHEL_AMI=",
-                {
-                  "Fn::FindInMap": [
-                    "RegionMap",
-                    {
-                      "Ref": "AWS::Region"
-                    },
-                    "RHELAMI"
-                  ]
-                },
-                "\n",
-                "export DEFAULT_SECURITY_GROUP_ID=",
-                {
-                  "Fn::GetAtt": [
-                    "SwarmNodeSecurityGroup",
-                    "GroupId"
-                  ]
-                },
-                "\n",
-                "export DEFAULT_KEY_PAIR=",
-                {
-                  "Ref": "KeyName"
-                },
-                "\n",
-                "export INITIAL_ADMIN_USER=",
-                {
-                  "Ref": "AdopUsername"
-                },
-                "\n",
-                "export INITIAL_ADMIN_PASSWORD_PLAIN=",
-                {
-                  "Ref": "AdopUserPassword"
-                },
-                "\n",
-                "\"> compose.env.sh\n",
-                "echo \". /data/adop-docker-compose/compose.env.sh\" >> ~/.bashrc\n",
-                "source /data/adop-docker-compose/compose.env.sh\n",
+                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
+
+                "yum -y install git\n",
+                
+                "docker run --restart=always --name swarm-leader -d -p 4000:4000 --restart=always swarm manage -H :4000 --replication --advertise $(hostname -i):4000 consul://10.10.1.100:8500\n",
+                
+                "docker network create --driver overlay --subnet=192.168.0.0/24 adop-network-overlay\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"ADOP is ready\",",
@@ -492,20 +461,56 @@
               [
                 "#!/bin/bash\n",
                 "sleep 5\n",
+                
                 "export IP=$(hostname --ip-address)\n",
-                "yum -y install git\n",
-                "mkdir -p /data && chmod 775 /data\n",
-                "cd /data && git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "cd /data/adop-docker-compose\n",
-                "install/centos/install_docker.sh\n",
+                "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+                "[dockerrepo]\n",
+                "name=Docker Repository\n",
+                "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+                "enabled=1\n",
+                "gpgcheck=1\n",
+                "gpgkey=https://yum.dockerproject.org/gpg\n",
+                "EOF\n",
+                
+                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+                "\n",
+                "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
+                "[Unit]\n",
+                "Description=Docker Application Container Engine\n",
+                "Documentation=https://docs.docker.com\n",
+                "After=network.target docker.socket\n",
+                "Requires=docker.socket\n",
+                "\n",
+                "[Service]\n",
+                "Type=notify\n",
+                "EnvironmentFile=-/etc/sysconfig/docker\n",
+                "ExecStart=\n",
+                "ExecStart=/usr/bin/docker daemon $DOCKER_OPTS\n",
+                "MountFlags=slave\n",
+                "LimitNOFILE=1048576\n",
+                "LimitNPROC=1048576\n",
+                "LimitCORE=infinity\n",
+                "TimeoutStartSec=0\n",
+                "\n",
+                "[Install]\n",
+                "WantedBy=multi-user.target\n",
+                "EOF\n",
+
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
                 "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
                 "EOF\n",
+                
                 "systemctl daemon-reload\n",
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
-                "docker run -d --restart=always --name swarm-node swarm join --advertise=$(hostname -i):2375 consul://10.10.1.100:8500\n",
-                "docker-compose -f docker-compose.yml -f adop-overrides.yml pull jenkins gitlab gerrit gerrit-mysql nexus\n",
+                
+                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
+
+                "yum -y install git\n",
+                
+                "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
+                
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
                 "\"UniqueId\" : \"IDSwarmNode1ID\",",
@@ -978,20 +983,56 @@
               [
                 "#!/bin/bash\n",
                 "sleep 5\n",
+                
                 "export IP=$(hostname --ip-address)\n",
-                "yum -y install git\n",
-                "mkdir -p /data && chmod 775 /data\n",
-                "cd /data && git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "cd /data/adop-docker-compose\n",
-                "install/centos/install_docker.sh\n",
+                "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+                "[dockerrepo]\n",
+                "name=Docker Repository\n",
+                "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+                "enabled=1\n",
+                "gpgcheck=1\n",
+                "gpgkey=https://yum.dockerproject.org/gpg\n",
+                "EOF\n",
+                
+                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+                "\n",
+                "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
+                "[Unit]\n",
+                "Description=Docker Application Container Engine\n",
+                "Documentation=https://docs.docker.com\n",
+                "After=network.target docker.socket\n",
+                "Requires=docker.socket\n",
+                "\n",
+                "[Service]\n",
+                "Type=notify\n",
+                "EnvironmentFile=-/etc/sysconfig/docker\n",
+                "ExecStart=\n",
+                "ExecStart=/usr/bin/docker daemon $DOCKER_OPTS\n",
+                "MountFlags=slave\n",
+                "LimitNOFILE=1048576\n",
+                "LimitNPROC=1048576\n",
+                "LimitCORE=infinity\n",
+                "TimeoutStartSec=0\n",
+                "\n",
+                "[Install]\n",
+                "WantedBy=multi-user.target\n",
+                "EOF\n",
+
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
                 "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
                 "EOF\n",
+                
                 "systemctl daemon-reload\n",
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
-                "docker run -d --restart=always --name swarm-node swarm join --advertise=$(hostname -i):2375 consul://10.10.1.100:8500\n",
-                "docker-compose -f compose/elk.yml -f docker-compose.yml -f adop-overrides.yml pull kibana logstash elasticsearch sensu-uchiwa sensu-api sensu-server sensu-client sensu-rabbitmq sensu-redis ldap-ltb ldap-phpadmin\n",
+                
+                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
+
+                "yum -y install git\n",
+                
+                "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
+                
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
                 "\"UniqueId\" : \"IDSwarmNode2ID\",",
@@ -1106,7 +1147,7 @@
             "CENTOSAMI"
           ]
         },
-        "InstanceType": "t2.medium",
+        "InstanceType": { "Ref": "SwarmNodeInstanceType" },
         "KeyName": {
           "Ref": "KeyName"
         },
@@ -1133,20 +1174,56 @@
               [
                 "#!/bin/bash\n",
                 "sleep 5\n",
+                
                 "export IP=$(hostname --ip-address)\n",
-                "yum -y install git\n",
-                "mkdir -p /data && chmod 775 /data\n",
-                "cd /data && git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "cd /data/adop-docker-compose\n",
-                "install/centos/install_docker.sh\n",
+                "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
+                "[dockerrepo]\n",
+                "name=Docker Repository\n",
+                "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+                "enabled=1\n",
+                "gpgcheck=1\n",
+                "gpgkey=https://yum.dockerproject.org/gpg\n",
+                "EOF\n",
+                
+                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
+                "\n",
+                "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
+                "[Unit]\n",
+                "Description=Docker Application Container Engine\n",
+                "Documentation=https://docs.docker.com\n",
+                "After=network.target docker.socket\n",
+                "Requires=docker.socket\n",
+                "\n",
+                "[Service]\n",
+                "Type=notify\n",
+                "EnvironmentFile=-/etc/sysconfig/docker\n",
+                "ExecStart=\n",
+                "ExecStart=/usr/bin/docker daemon $DOCKER_OPTS\n",
+                "MountFlags=slave\n",
+                "LimitNOFILE=1048576\n",
+                "LimitNPROC=1048576\n",
+                "LimitCORE=infinity\n",
+                "TimeoutStartSec=0\n",
+                "\n",
+                "[Install]\n",
+                "WantedBy=multi-user.target\n",
+                "EOF\n",
+
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
                 "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
                 "EOF\n",
+                
                 "systemctl daemon-reload\n",
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
-                "docker run -d --restart=always --name swarm-node swarm join --advertise=$(hostname -i):2375 consul://10.10.1.100:8500\n",
-                "docker-compose -f docker-compose.yml -f adop-overrides.yml pull ldap jenkins-slave selenium-node-firefox selenium-hub selenium-node-chrome sonar sonar-mysql\n",
+                
+                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
+
+                "yum -y install git\n",
+                
+                "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
+                
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
                 "\"UniqueId\" : \"IDSwarmNode3ID\",",
