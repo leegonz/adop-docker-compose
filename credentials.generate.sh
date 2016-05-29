@@ -77,7 +77,7 @@ else
 	sed -i'' -e "s/###INITIAL_ADMIN_PASSWORD_PLAIN###/$INITIAL_ADMIN_PASSWORD_PLAIN/g" platform.secrets.sh
 		
 	# Generate random passwords for Jenkins, Gerrit and SQL and place them in secrets file
-	echo "Generating random passwords for Jenkins, Gerrit and SQL..."
+	echo "Generating random passwords for Jenkins, Gerrit and Gitlab and SQL..."
 	PASSWORD_JENKINS=$(createPassword)
 	sed -i'' -e "s/###PASSWORD_JENKINS_PLAIN###/$PASSWORD_JENKINS/g" platform.secrets.sh
 	
@@ -86,6 +86,9 @@ else
 	
 	PASSWORD_SQL=$(createPassword)
 	sed -i'' -e "s/###PASSWORD_SQL_PLAIN###/$PASSWORD_SQL/g" platform.secrets.sh
+  
+  PASSWORD_GITLAB=$(createPassword)
+  sed -i'' -e "s/###PASSWORD_GITLAB###/$PASSWORD_SQL/g" platform.secrets.sh
 fi
 
 # Source all the variables that were written to the secrets file
@@ -96,7 +99,8 @@ source platform.secrets.sh
 if  [ $INITIAL_ADMIN_PASSWORD_PLAIN == "###INITIAL_ADMIN_PASSWORD_PLAIN###" ] || \
 	[ $PASSWORD_JENKINS == "###PASSWORD_JENKINS_PLAIN###" ] || \
 	[ $PASSWORD_GERRIT == "###PASSWORD_GERRIT_PLAIN###" ] || \
-	[ $PASSWORD_SQL == "###PASSWORD_SQL_PLAIN###" ]; then
+	[ $PASSWORD_SQL == "###PASSWORD_SQL_PLAIN###" ]; || \
+  [ $PASSWORD_GITLAB ==  "###PASSWORD_GITLAB###" then
 	echo "Your passwords are set to the default tokens provided in the example secrets file, this is not allowed."
 	echo "Delete the platform.secrets.sh file and re-run the credentials.generate.sh script"
 	exit
@@ -106,3 +110,4 @@ fi
 export INITIAL_ADMIN_PASSWORD=$(echo -n $INITIAL_ADMIN_PASSWORD_PLAIN | base64)
 export JENKINS_PWD=$(echo -n $PASSWORD_JENKINS | base64)
 export GERRIT_PWD=$(echo -n $PASSWORD_GERRIT | base64)
+export GITLAB_PWD=$(echo -n $PASSWORD_GITLAB | base64)
