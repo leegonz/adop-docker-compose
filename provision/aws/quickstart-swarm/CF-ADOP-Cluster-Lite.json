@@ -226,7 +226,7 @@
                 "sleep 5\n",
                 "IP=$(hostname -i)\n",
                 "yum -y install docker\n",
-                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
                 "service docker start\n",
                 "chkconfig docker on\n",
@@ -357,14 +357,40 @@
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
                 
-                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
-
-                "yum -y install git\n",
                 
-                "docker run --restart=always --name swarm-leader -d -p 4000:4000 --restart=always swarm manage -H :4000 --replication --advertise $(hostname -i):4000 consul://10.10.1.100:8500\n",
+                "docker run --restart=always --name swarm-leader -d -p 4000:4000 --restart=always swarm manage -H :4000 --replication --advertise ${IP}:4000 consul://10.10.1.100:8500\n",
                 
                 "docker network create --driver overlay --subnet=192.168.0.0/24 adop-network-overlay\n",
+                
+                "yum -y install git\n",
+                "mkdir /adop && cd /adop && git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "cd /adop/adop-docker-compose/provision/aws/quickstart-swarm\n",
+                
+                "export PUBLIC_IP=$(curl http://instance-data/latest/meta-data/public-ipv4)\n",
+                "echo \"\n",
+                "export ADOP_HOME=\"/adop/adop-docker-compose/provision/aws/quickstart-swarm\"\n",
+                "export PUBLIC_IP=$PUBLIC_IP\n",
+                "export TARGET_HOST=$PUBLIC_IP\n",
+                "export LOGSTASH_HOST=$PUBLIC_IP\n",
+                "export VOLUME_DRIVER=local\n",
+                "export CUSTOM_NETWORK_NAME=adop-network-overlay\n",
+                "export AWS_REGION=",{ "Ref": "AWS::Region" },"\n",
+                "export VPC_ID=",{ "Ref": "Vpc" },"\n",
+                "export DEFAULT_PUBLIC_SUBNET_ID=",{ "Ref": "PublicSubnet" },"\n",
+                "export DEFAULT_PRIVATE_SUBNET_ID=",{ "Ref": "PrivateSubnet" },"\n",
+                "export DEFAULT_RHEL_AMI=",{ "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "RHELAMI" ] },"\n",
+                "export DEFAULT_CENTOS_AMI=",{ "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "CENTOSAMI" ] },"\n",
+                "export DEFAULT_SECURITY_GROUP_ID=",{ "Fn::GetAtt": [ "SwarmNodeSecurityGroup", "GroupId" ] },"\n",
+                "export DEFAULT_KEY_PAIR=",{ "Ref": "KeyName" },"\n",
+                "export INITIAL_ADMIN_USER=",{ "Ref": "AdopUsername" },"\n",
+                "export INITIAL_ADMIN_PASSWORD_PLAIN=",{ "Ref": "AdopUserPassword" },"\n",
+                "\"> compose.env.sh\n",
+                
+                "echo \". /adop/adop-docker-compose/provision/aws/quickstart-swarm/compose.env.sh\" >> ~/.bashrc\n",
+                
+                "leader.sh\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"ADOP is ready\",",
@@ -504,12 +530,14 @@
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
                 
-                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
-
-                "yum -y install git\n",
                 
                 "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
+
+                "yum -y install git\n",
+                "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "/adop/adop-docker-compose/provision/aws/quickstart-swarm/node1.sh\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
@@ -1026,12 +1054,14 @@
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
                 
-                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
-
-                "yum -y install git\n",
                 
                 "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
+                
+                "yum -y install git\n",
+                "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "/adop/adop-docker-compose/provision/aws/quickstart-swarm/node2.sh\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
@@ -1217,12 +1247,15 @@
                 "systemctl start docker\n",
                 "chkconfig docker on\n",
                 
-                "curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
+                "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
-
-                "yum -y install git\n",
                 
                 "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
+
+                "yum -y install git\n",
+
+                "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "/adop/adop-docker-compose/provision/aws/quickstart-swarm/node3.sh\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
