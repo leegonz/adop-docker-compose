@@ -14,7 +14,7 @@ gitlab:
     - gitlab_opt:/var/opt/gitlab
     - gitlab_log:/var/log/gitlab
   environment:
-    GITLAB_ROOT_PASSWORD: ${GITLAB_PWD}
+    GITLAB_ROOT_PASSWORD: ${PASSWORD_GITLAB}
     GITLAB_OMNIBUS_CONFIG: |
      external_url 'http://${TARGET_HOST}/gitlab'
      gitlab_rails['ldap_enabled'] = true
