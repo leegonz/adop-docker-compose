@@ -366,7 +366,9 @@
                 
                 "yum -y install git\n",
                 "mkdir /adop && cd /adop && git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "cd /adop/adop-docker-compose/provision/aws/quickstart-swarm\n",
+                "chmod -R 700 /adop/adop-docker-compose\n",
+                
+                "cd /adop/adop-docker-compose\n",
                 
                 "export PUBLIC_IP=$(curl http://instance-data/latest/meta-data/public-ipv4)\n",
                 "echo \"\n",
@@ -386,11 +388,15 @@
                 "export DEFAULT_KEY_PAIR=",{ "Ref": "KeyName" },"\n",
                 "export INITIAL_ADMIN_USER=",{ "Ref": "AdopUsername" },"\n",
                 "export INITIAL_ADMIN_PASSWORD_PLAIN=",{ "Ref": "AdopUserPassword" },"\n",
-                "\"> compose.env.sh\n",
+                "\"> cloudformation_vars.sh\n",
                 
-                "echo \". /adop/adop-docker-compose/provision/aws/quickstart-swarm/compose.env.sh\" >> ~/.bashrc\n",
+                "echo \". /adop/adop-docker-compose/provision/aws/quickstart-swarm/cloudformation_vars.sh\" >> ~/.bashrc\n",
                 
-                "leader.sh\n",
+                "source cloudformation_vars.sh\n",
+                "source credentials.generate.sh\n",
+                "source env.config.sh\n",
+                
+                "docker-compose -f docker-compose.yml pull proxy\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"ADOP is ready\",",
@@ -474,7 +480,7 @@
                   {
                     "Ref": "AWS::StackName"
                   },
-                  "SwarmNodeTools1"
+                  "JenkinsGitNexus"
                 ]
               ]
             }
@@ -537,7 +543,9 @@
 
                 "yum -y install git\n",
                 "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "/adop/adop-docker-compose/provision/aws/quickstart-swarm/node1.sh\n",
+                "cd /adop/adop-docker-compose\n",
+                
+                "docker-compose -f docker-compose.yml -f compose/gitlab.yml -f etc/jenkins-overrides/default.yml pull jenkins gitlab gerrit gerrit-mysql nexus jenkins-slave\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
@@ -998,7 +1006,7 @@
                   {
                     "Ref": "AWS::StackName"
                   },
-                  "SwarmNodeTools2"
+                  "SeleniumLDAP"
                 ]
               ]
             }
@@ -1061,7 +1069,9 @@
                 
                 "yum -y install git\n",
                 "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "/adop/adop-docker-compose/provision/aws/quickstart-swarm/node2.sh\n",
+                "cd /adop/adop-docker-compose\n",
+                
+                "docker-compose -f docker-compose.yml pull ldap selenium-hub selenium-node-chrome selenium-node-firefox sonar sonar-mysql ldap-ltb ldap-phpadmin\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
@@ -1191,7 +1201,7 @@
                   {
                     "Ref": "AWS::StackName"
                   },
-                  "SwarmNodeTools3"
+                  "SensuELKnode"
                 ]
               ]
             }
@@ -1255,7 +1265,10 @@
                 "yum -y install git\n",
 
                 "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "/adop/adop-docker-compose/provision/aws/quickstart-swarm/node3.sh\n",
+                "cd /adop/adop-docker-compose\n",
+                
+                "docker-compose -f docker-compose.yml sensu-uchiwa sensu-api sensu-server sensu-client sensu-rabbitmq sensu-redis\n",
+                "docker-compose -f compose/elk.yml pull\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
