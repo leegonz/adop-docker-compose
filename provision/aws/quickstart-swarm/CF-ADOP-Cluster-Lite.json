@@ -76,16 +76,6 @@
     }
   },
   "Parameters": {
-    "AdopLandingPage": {
-      "Type": "String",
-      "Description": "Adop Extensions. Customise your ADOP Landing page.",
-      "AllowedValues": [
-        "GitlabExtension",
-        "Default"
-      ],
-      "ConstraintDescription": "Must be a valid entry.",
-      "Default": "GitlabExtension"
-    },
     "AdopWorkspace": {
       "Default": "",
       "Description": "Initialise a Jenkins workspace folder.",
@@ -133,7 +123,7 @@
     },
     "SwarmNodeInstanceType": {
       "Type": "String",
-      "Description": "ADOP Core EC2 HVM instance type. Note that this can be adjusted after the stack has been completed.",
+      "Description": "ADOP Core Centos 7 EC2 HVM instance type. Please make sure that you have previously agreed the terms and conditions in this link https://aws.amazon.com/marketplace/pp/B00O7WM7QW.",
       "AllowedValues": [
         "t2.small",
         "t2.medium",
@@ -313,7 +303,7 @@
             "Fn::Join": [
               "",
               [
-                "#!/bin/bash -e\n",
+                "#!/bin/bash\n",
                 "sleep 10\n",
                 
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
@@ -325,8 +315,8 @@
                 "gpgkey=https://yum.dockerproject.org/gpg\n",
                 "EOF\n",
                 
-                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
-                "\n",
+                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
                 "Description=Docker Application Container Engine\n",
@@ -350,7 +340,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
@@ -365,7 +355,9 @@
                 "docker network create --driver overlay --subnet=192.168.0.0/24 adop-network-overlay\n",
                 
                 "yum -y install git\n",
-                "mkdir /adop && cd /adop && git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "mkdir /adop && cd /adop\n",
+                "git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "git clone https://github.com/bzon/adop-oracle-platform-extension.git && mv /adop/adop-oracle-platform-extension/*.* /adop/adop-docker-compose\n",
                 "chmod -R 700 /adop/adop-docker-compose\n",
                 
                 "cd /adop/adop-docker-compose\n",
@@ -389,15 +381,23 @@
                 "export INITIAL_ADMIN_USER=",{ "Ref": "AdopUsername" },"\n",
                 "export INITIAL_ADMIN_PASSWORD_PLAIN=",{ "Ref": "AdopUserPassword" },"\n",
                 "\"> cloudformation_vars.sh\n",
-                
-                "echo \". /adop/adop-docker-compose/cloudformation_vars.sh\" >> ~/.bashrc\n",
-                
+           
                 "source cloudformation_vars.sh\n",
                 "source credentials.generate.sh\n",
                 "source env.config.sh\n",
-                
-                
-                
+                           
+                "export COMPOSE_OVERRIDES='-f etc/volumes;/local/default.yml'\n",
+                "export DOCKER_HOST=tcp://10.10.2.102:2375\n",
+                "docker-compose -f compose/elk.yml up -d\n",
+                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES up -d sensu-uchiwa sensu-api sensu-server sensu-client sensu-rabbitmq sensu-redis\n",
+                "export DOCKER_HOST=tcp://10.10.2.101:2375\n",
+                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES up -d nexus ldap selenium-hub selenium-node-chrome selenium-node-firefox sonar sonar-mysql ldap-ltb ldap-phpadmin\n",
+                "export DOCKER_HOST=tcp://10.10.2.100:2375\n",
+                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f compose/gitlab.yml -f adop-overrides.yml up -d jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
+                "export DOCKER_HOST=\n",
+                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f adop-overrides.yml up -d proxy\n",
+                "./gitlab-load-platform.sh ",{ "Ref": "AdopWorkspace" },"\n",
+                "docker restart proxy\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"ADOP is ready\",",
@@ -505,8 +505,8 @@
                 "gpgkey=https://yum.dockerproject.org/gpg\n",
                 "EOF\n",
                 
-                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
-                "\n",
+                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
                 "Description=Docker Application Container Engine\n",
@@ -530,7 +530,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
@@ -543,10 +543,12 @@
                 "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
 
                 "yum -y install git\n",
-                "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "mkdir /adop && cd /adop\n",
+                "git clone https://github.com/bzon/adop-docker-compose.git\n",
+                "git clone https://github.com/bzon/adop-oracle-platform-extension.git && mv /adop/adop-oracle-platform-extension/*.* /adop/adop-docker-compose\n",
                 "cd /adop/adop-docker-compose\n",
                 
-                "docker-compose -f docker-compose.yml -f compose/gitlab.yml -f etc/jenkins-overrides/default.yml pull jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
+                "docker-compose -f docker-compose.yml -f compose/gitlab.yml -f adop-overrides.yml pull jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
@@ -1031,8 +1033,8 @@
                 "gpgkey=https://yum.dockerproject.org/gpg\n",
                 "EOF\n",
                 
-                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
-                "\n",
+                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
                 "Description=Docker Application Container Engine\n",
@@ -1056,7 +1058,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
@@ -1226,8 +1228,8 @@
                 "gpgkey=https://yum.dockerproject.org/gpg\n",
                 "EOF\n",
                 
-                "yum -y install docker-engine-1.10.3-1.el7.centos.x86_64\n",
-                "\n",
+                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
                 "Description=Docker Application Container Engine\n",
@@ -1251,7 +1253,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
