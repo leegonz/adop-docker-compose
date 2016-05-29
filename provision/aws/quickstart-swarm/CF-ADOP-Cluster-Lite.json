@@ -304,8 +304,7 @@
               "",
               [
                 "#!/bin/bash\n",
-                "sleep 10\n",
-                
+                "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
                 "name=Docker Repository\n",
@@ -493,8 +492,6 @@
               "",
               [
                 "#!/bin/bash\n",
-                "sleep 5\n",
-                
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
@@ -1020,9 +1017,7 @@
             "Fn::Join": [
               "",
               [
-                "#!/bin/bash\n",
-                "sleep 5\n",
-                
+                "#!/bin/bash\n", 
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
@@ -1216,8 +1211,6 @@
               "",
               [
                 "#!/bin/bash\n",
-                "sleep 5\n",
-                
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
