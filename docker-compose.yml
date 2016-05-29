@@ -272,6 +272,7 @@ selenium-node-chrome:
   image: selenium/node-chrome:2.46.0
   net: ${CUSTOM_NETWORK_NAME}
   environment:
+    REMOTE_HOST: "http://selenium-node-chrome:5555"
     SE_OPTS: "-nodeConfig /var/selenium-config/config-chrome.json"
     HUB_PORT_4444_TCP_ADDR: "selenium-hub"
     HUB_PORT_4444_TCP_PORT: "4444"
