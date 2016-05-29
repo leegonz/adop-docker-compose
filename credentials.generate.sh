@@ -99,8 +99,8 @@ source platform.secrets.sh
 if  [ $INITIAL_ADMIN_PASSWORD_PLAIN == "###INITIAL_ADMIN_PASSWORD_PLAIN###" ] || \
 	[ $PASSWORD_JENKINS == "###PASSWORD_JENKINS_PLAIN###" ] || \
 	[ $PASSWORD_GERRIT == "###PASSWORD_GERRIT_PLAIN###" ] || \
-	[ $PASSWORD_SQL == "###PASSWORD_SQL_PLAIN###" ]; || \
-  [ $PASSWORD_GITLAB ==  "###PASSWORD_GITLAB###" then
+	[ $PASSWORD_SQL == "###PASSWORD_SQL_PLAIN###" ] || \
+  [ $PASSWORD_GITLAB ==  "###PASSWORD_GITLAB###"]; then
 	echo "Your passwords are set to the default tokens provided in the example secrets file, this is not allowed."
 	echo "Delete the platform.secrets.sh file and re-run the credentials.generate.sh script"
 	exit
@@ -110,4 +110,3 @@ fi
 export INITIAL_ADMIN_PASSWORD=$(echo -n $INITIAL_ADMIN_PASSWORD_PLAIN | base64)
 export JENKINS_PWD=$(echo -n $PASSWORD_JENKINS | base64)
 export GERRIT_PWD=$(echo -n $PASSWORD_GERRIT | base64)
-export GITLAB_PWD=$(echo -n $PASSWORD_GITLAB | base64)
