@@ -248,7 +248,15 @@
             "DeviceName": "/dev/sda1",
             "Ebs": {
               "DeleteOnTermination": "true",
-              "VolumeSize": 50,
+              "VolumeSize": 8,
+              "VolumeType": "gp2"
+            }
+          },
+          {
+            "DeviceName": "/dev/sda2",
+            "Ebs": {
+              "DeleteOnTermination": "true",
+              "VolumeSize": 20,
               "VolumeType": "gp2"
             }
           }
@@ -316,6 +324,12 @@
                 
                 "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
                 
+                "yum -y install lvm2\n",
+                "pvcreate /dev/xvdb\n",
+                "vgcreate vg-docker /dev/xvdb\n",
+                "lvcreate -l 95%VG -n data vg-docker\n",
+                "lvcreate -l 5%VG -n metadata vg-docker\n", 
+                
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
                 "Description=Docker Application Container Engine\n",
@@ -339,7 +353,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
@@ -354,6 +368,7 @@
                 "docker network create --driver overlay --subnet=192.168.0.0/24 adop-network-overlay\n",
                 
                 "yum -y install git\n",
+                
                 "mkdir /adop && cd /adop\n",
                 "git clone https://github.com/bzon/adop-docker-compose.git\n",
                 "git clone https://github.com/bzon/adop-oracle-platform-extension.git && mv /adop/adop-oracle-platform-extension/*.* /adop/adop-docker-compose\n",
@@ -435,6 +450,14 @@
             "DeviceName": "/dev/sda1",
             "Ebs": {
               "DeleteOnTermination": "true",
+              "VolumeSize": 8,
+              "VolumeType": "gp2"
+            }
+          },
+          {
+            "DeviceName": "/dev/sda2",
+            "Ebs": {
+              "DeleteOnTermination": "true",
               "VolumeSize": 50,
               "VolumeType": "gp2"
             }
@@ -493,6 +516,7 @@
               "",
               [
                 "#!/bin/bash\n",
+                "#!/bin/bash\n",
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
@@ -504,6 +528,12 @@
                 "EOF\n",
                 
                 "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                
+                "yum -y install lvm2\n",
+                "pvcreate /dev/xvdb\n",
+                "vgcreate vg-docker /dev/xvdb\n",
+                "lvcreate -l 95%VG -n data vg-docker\n",
+                "lvcreate -l 5%VG -n metadata vg-docker\n", 
                 
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
@@ -528,7 +558,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
@@ -961,10 +991,18 @@
             "DeviceName": "/dev/sda1",
             "Ebs": {
               "DeleteOnTermination": "true",
+              "VolumeSize": 8,
+              "VolumeType": "gp2"
+            }
+          },
+          {
+            "DeviceName": "/dev/sda2",
+            "Ebs": {
+              "DeleteOnTermination": "true",
               "VolumeSize": 50,
               "VolumeType": "gp2"
             }
-          }
+          }          
         ],
         "NetworkInterfaces": [
           {
@@ -1019,6 +1057,7 @@
               "",
               [
                 "#!/bin/bash\n", 
+                "#!/bin/bash\n",
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
@@ -1030,6 +1069,12 @@
                 "EOF\n",
                 
                 "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                
+                "yum -y install lvm2\n",
+                "pvcreate /dev/xvdb\n",
+                "vgcreate vg-docker /dev/xvdb\n",
+                "lvcreate -l 95%VG -n data vg-docker\n",
+                "lvcreate -l 5%VG -n metadata vg-docker\n", 
                 
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
@@ -1054,7 +1099,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
@@ -1156,6 +1201,14 @@
             "DeviceName": "/dev/sda1",
             "Ebs": {
               "DeleteOnTermination": "true",
+              "VolumeSize": 8,
+              "VolumeType": "gp2"
+            }
+          },
+          {
+            "DeviceName": "/dev/sda2",
+            "Ebs": {
+              "DeleteOnTermination": "true",
               "VolumeSize": 50,
               "VolumeType": "gp2"
             }
@@ -1212,6 +1265,7 @@
               "",
               [
                 "#!/bin/bash\n",
+                "#!/bin/bash\n",
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
@@ -1223,6 +1277,12 @@
                 "EOF\n",
                 
                 "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                
+                "yum -y install lvm2\n",
+                "pvcreate /dev/xvdb\n",
+                "vgcreate vg-docker /dev/xvdb\n",
+                "lvcreate -l 95%VG -n data vg-docker\n",
+                "lvcreate -l 5%VG -n metadata vg-docker\n", 
                 
                 "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
                 "[Unit]\n",
@@ -1247,7 +1307,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
