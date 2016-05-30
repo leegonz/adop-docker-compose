@@ -371,7 +371,7 @@
                 
                 "mkdir /adop && cd /adop\n",
                 "git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "git clone https://github.com/bzon/adop-oracle-platform-extension.git && mv /adop/adop-oracle-platform-extension/*.* /adop/adop-docker-compose\n",
+                "git clone https://github.com/bzon/pdc-adop-cartridge-loader.git && mv /adop/pdc-adop-cartridge-loader/*.* /adop/adop-docker-compose\n",
                 "chmod -R 700 /adop/adop-docker-compose\n",
                 
                 "cd /adop/adop-docker-compose\n",
@@ -516,7 +516,6 @@
               "",
               [
                 "#!/bin/bash\n",
-                "#!/bin/bash\n",
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
                 "[dockerrepo]\n",
@@ -573,7 +572,7 @@
                 "yum -y install git\n",
                 "mkdir /adop && cd /adop\n",
                 "git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "git clone https://github.com/bzon/adop-oracle-platform-extension.git && mv /adop/adop-oracle-platform-extension/*.* /adop/adop-docker-compose\n",
+                "git clone https://github.com/bzon/pdc-adop-cartridge-loader.git && mv /adop/pdc-adop-cartridge-loader/*.* /adop/adop-docker-compose\n",
                 "cd /adop/adop-docker-compose\n",
                 
                 "docker-compose -f docker-compose.yml -f compose/gitlab.yml -f adop-overrides.yml pull jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
@@ -1056,7 +1055,6 @@
             "Fn::Join": [
               "",
               [
-                "#!/bin/bash\n", 
                 "#!/bin/bash\n",
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
@@ -1264,7 +1262,6 @@
             "Fn::Join": [
               "",
               [
-                "#!/bin/bash\n",
                 "#!/bin/bash\n",
                 "export IP=$(hostname --ip-address)\n",
                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
