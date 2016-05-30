@@ -386,7 +386,7 @@
                 "source credentials.generate.sh\n",
                 "source env.config.sh\n",
                            
-                "export COMPOSE_OVERRIDES='-f etc/volumes;/local/default.yml'\n",
+                "export COMPOSE_OVERRIDES='-f etc/volumes/local/default.yml'\n",
                 "export DOCKER_HOST=tcp://10.10.2.102:2375\n",
                 "docker-compose -f compose/elk.yml up -d\n",
                 "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES up -d sensu-uchiwa sensu-api sensu-server sensu-client sensu-rabbitmq sensu-redis\n",
