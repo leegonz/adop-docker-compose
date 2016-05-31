@@ -6,4 +6,4 @@
 
 # The Accenture DevOps Platform: Overview (Bryan's extension)
 
-![HomePage](https://raw.githubusercontent.com/accenture/adop-docker-compose/master/img/home-extended.png)
+![HomePage](https://raw.githubusercontent.com/bzon/adop-docker-compose/master/img/home-extended.png)
