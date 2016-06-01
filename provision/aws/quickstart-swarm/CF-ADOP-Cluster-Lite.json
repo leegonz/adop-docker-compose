@@ -411,6 +411,7 @@
                 "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f compose/gitlab.yml -f adop-overrides.yml up -d jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
                 "export DOCKER_HOST=\n",
                 "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f adop-overrides.yml up -d proxy\n",
+                "sleep 10\n",
                 "./gitlab-load-platform.sh ",{ "Ref": "AdopWorkspace" },"\n",
                 "docker restart proxy\n",
                 
