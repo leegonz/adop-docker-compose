@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Adop Core Generation 5 CloudFormation Swarm Stack - Lite (3 Swarm Nodes)",
+  "Description": "Adop Core Generation 5 CloudFormation Swarm Stack - Lite (Single Swarm Node)",
   "Mappings": {
     "RegionMap": {
       "eu-central-1": {
@@ -139,7 +139,7 @@
         "m3.2xlarge"
       ],
       "ConstraintDescription": "Must be a valid EC2 HVM instance type.",
-      "Default": "t2.large"
+      "Default": "m4.xlarge"
     }
   },
   "Resources": {
@@ -256,7 +256,7 @@
             "DeviceName": "/dev/sda2",
             "Ebs": {
               "DeleteOnTermination": "true",
-              "VolumeSize": 20,
+              "VolumeSize": 10,
               "VolumeType": "gp2"
             }
           }
@@ -400,14 +400,12 @@
                 "source cloudformation_vars.sh\n",
                 "source credentials.generate.sh\n",
                 "source env.config.sh\n",
-                           
+                
                 "export COMPOSE_OVERRIDES='-f etc/volumes/local/default.yml'\n",
-                "export DOCKER_HOST=tcp://10.10.2.102:2375\n",
+                "export DOCKER_HOST=tcp://10.10.2.100:2375\n",
                 "docker-compose -f compose/elk.yml up -d\n",
                 "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES up -d sensu-uchiwa sensu-api sensu-server sensu-client sensu-rabbitmq sensu-redis\n",
-                "export DOCKER_HOST=tcp://10.10.2.101:2375\n",
                 "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES up -d nexus ldap selenium-hub selenium-node-chrome selenium-node-firefox sonar sonar-mysql ldap-ltb ldap-phpadmin\n",
-                "export DOCKER_HOST=tcp://10.10.2.100:2375\n",
                 "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f compose/gitlab.yml -f adop-overrides.yml up -d jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
                 "export DOCKER_HOST=\n",
                 "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f adop-overrides.yml up -d proxy\n",
@@ -438,9 +436,7 @@
       },
       "DependsOn": [
         "AdopNatConsulInstance",
-        "SwarmNodeWaitCondition",
-        "SwarmNodeWaitCondition2",
-        "SwarmNodeWaitCondition3"
+        "SwarmNodeWaitCondition"
       ]
     },
     "AdopSwarmNode1": {
@@ -459,7 +455,7 @@
             "DeviceName": "/dev/sda2",
             "Ebs": {
               "DeleteOnTermination": "true",
-              "VolumeSize": 50,
+              "VolumeSize": 100,
               "VolumeType": "gp2"
             }
           }
@@ -505,7 +501,7 @@
                   {
                     "Ref": "AWS::StackName"
                   },
-                  "JenkinsGitRepo"
+                  "SwarmNodeAllTools"
                 ]
               ]
             }
@@ -576,7 +572,8 @@
                 "git clone https://github.com/bzon/pdc-adop-cartridge-loader.git && mv /adop/pdc-adop-cartridge-loader/*.* /adop/adop-docker-compose\n",
                 "cd /adop/adop-docker-compose\n",
                 
-                "docker-compose -f docker-compose.yml -f compose/gitlab.yml -f adop-overrides.yml pull jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
+                "docker-compose -f compose/elk.yml\n",
+                "docker-compose -f docker-compose.yml -f compose/gitlab.yml -f adop-overrides.yml pull\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
@@ -972,7 +969,7 @@
         "Handle": {
           "Ref": "SwarmNodeWaitConditionHandle"
         },
-        "Timeout": "1500"
+        "Timeout": "3000"
       },
       "Metadata": {
         "AWS::CloudFormation::Designer": {
@@ -982,189 +979,6 @@
       "DependsOn": [
         "AdopSwarmNode1"
       ]
-    },
-    "AdopSwarmNode2": {
-      "Type": "AWS::EC2::Instance",
-      "Properties": {
-        "BlockDeviceMappings": [
-          {
-            "DeviceName": "/dev/sda1",
-            "Ebs": {
-              "DeleteOnTermination": "true",
-              "VolumeSize": 8,
-              "VolumeType": "gp2"
-            }
-          },
-          {
-            "DeviceName": "/dev/sda2",
-            "Ebs": {
-              "DeleteOnTermination": "true",
-              "VolumeSize": 50,
-              "VolumeType": "gp2"
-            }
-          }          
-        ],
-        "NetworkInterfaces": [
-          {
-            "AssociatePublicIpAddress": "false",
-            "DeleteOnTermination": "true",
-            "DeviceIndex": "0",
-            "GroupSet": [
-              {
-                "Ref": "SwarmNodeSecurityGroup"
-              }
-            ],
-            "PrivateIpAddress": "10.10.2.101",
-            "SubnetId": {
-              "Ref": "PrivateSubnet"
-            }
-          }
-        ],
-        "ImageId": {
-          "Fn::FindInMap": [
-            "RegionMap",
-            {
-              "Ref": "AWS::Region"
-            },
-            "CENTOSAMI"
-          ]
-        },
-        "InstanceType": {
-          "Ref": "SwarmNodeInstanceType"
-        },
-        "KeyName": {
-          "Ref": "KeyName"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {
-              "Fn::Join": [
-                "-",
-                [
-                  {
-                    "Ref": "AWS::StackName"
-                  },
-                  "SeleniumLdapNexus"
-                ]
-              ]
-            }
-          }
-        ],
-        "UserData": {
-          "Fn::Base64": {
-            "Fn::Join": [
-              "",
-              [
-                "#!/bin/bash\n",
-                "export IP=$(hostname --ip-address)\n",
-                "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
-                "[dockerrepo]\n",
-                "name=Docker Repository\n",
-                "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
-                "enabled=1\n",
-                "gpgcheck=1\n",
-                "gpgkey=https://yum.dockerproject.org/gpg\n",
-                "EOF\n",
-                
-                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
-                
-                "yum -y install lvm2\n",
-                "pvcreate /dev/xvdb\n",
-                "vgcreate vg-docker /dev/xvdb\n",
-                "lvcreate -l 95%VG -n data vg-docker\n",
-                "lvcreate -l 5%VG -n metadata vg-docker\n", 
-                
-                "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
-                "[Unit]\n",
-                "Description=Docker Application Container Engine\n",
-                "Documentation=https://docs.docker.com\n",
-                "After=network.target docker.socket\n",
-                "Requires=docker.socket\n",
-                "\n",
-                "[Service]\n",
-                "Type=notify\n",
-                "EnvironmentFile=-/etc/sysconfig/docker\n",
-                "ExecStart=\n",
-                "ExecStart=/usr/bin/docker daemon $DOCKER_OPTS\n",
-                "MountFlags=slave\n",
-                "LimitNOFILE=1048576\n",
-                "LimitNPROC=1048576\n",
-                "LimitCORE=infinity\n",
-                "TimeoutStartSec=0\n",
-                "\n",
-                "[Install]\n",
-                "WantedBy=multi-user.target\n",
-                "EOF\n",
-
-                "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
-                "EOF\n",
-                
-                "systemctl daemon-reload\n",
-                "systemctl start docker\n",
-                "chkconfig docker on\n",
-                
-                "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
-                "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
-                
-                "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
-                
-                "yum -y install git\n",
-                "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "cd /adop/adop-docker-compose\n",
-                
-                "docker-compose -f docker-compose.yml pull nexus ldap selenium-hub selenium-node-chrome selenium-node-firefox sonar sonar-mysql ldap-ltb ldap-phpadmin\n",
-                
-                "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
-                "\"Reason\" : \"Swarm Node is ready\",",
-                "\"UniqueId\" : \"IDSwarmNode2ID\",",
-                "\"Data\" : \"Done\"}' ",
-                "\"",
-                {
-                  "Ref": "SwarmNodeWaitConditionHandle2"
-                },
-                "\"\n",
-                "\n"
-              ]
-            ]
-          }
-        }
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "cba4c0fc-c175-4f41-88be-bdcd9a25a862"
-        }
-      },
-      "DependsOn": [
-        "NATWaitCondition"
-      ]
-    },
-    "SwarmNodeWaitCondition2": {
-      "Type": "AWS::CloudFormation::WaitCondition",
-      "Properties": {
-        "Handle": {
-          "Ref": "SwarmNodeWaitConditionHandle2"
-        },
-        "Timeout": "1500"
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "007d682c-145c-42ac-a10f-dbb3c791ca22"
-        }
-      },
-      "DependsOn": [
-        "AdopSwarmNode2"
-      ]
-    },
-    "SwarmNodeWaitConditionHandle2": {
-      "Type": "AWS::CloudFormation::WaitConditionHandle",
-      "Properties": {},
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "4639eafb-f924-47cc-9b96-2e3d5c363e1d"
-        }
-      }
     },
     "NATWaitCondition": {
       "Type": "AWS::CloudFormation::WaitCondition",
@@ -1191,190 +1005,6 @@
           "id": "0ed6b090-237d-4f57-ad37-f77099070540"
         }
       }
-    },
-    "AdopSwarmNode3": {
-      "Type": "AWS::EC2::Instance",
-      "Properties": {
-        "BlockDeviceMappings": [
-          {
-            "DeviceName": "/dev/sda1",
-            "Ebs": {
-              "DeleteOnTermination": "true",
-              "VolumeSize": 8,
-              "VolumeType": "gp2"
-            }
-          },
-          {
-            "DeviceName": "/dev/sda2",
-            "Ebs": {
-              "DeleteOnTermination": "true",
-              "VolumeSize": 50,
-              "VolumeType": "gp2"
-            }
-          }
-        ],
-        "NetworkInterfaces": [
-          {
-            "AssociatePublicIpAddress": "false",
-            "DeleteOnTermination": "true",
-            "DeviceIndex": "0",
-            "GroupSet": [
-              {
-                "Ref": "SwarmNodeSecurityGroup"
-              }
-            ],
-            "PrivateIpAddress": "10.10.2.102",
-            "SubnetId": {
-              "Ref": "PrivateSubnet"
-            }
-          }
-        ],
-        "ImageId": {
-          "Fn::FindInMap": [
-            "RegionMap",
-            {
-              "Ref": "AWS::Region"
-            },
-            "CENTOSAMI"
-          ]
-        },
-        "InstanceType": { "Ref": "SwarmNodeInstanceType" },
-        "KeyName": {
-          "Ref": "KeyName"
-        },
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": {
-              "Fn::Join": [
-                "-",
-                [
-                  {
-                    "Ref": "AWS::StackName"
-                  },
-                  "SensuELKnode"
-                ]
-              ]
-            }
-          }
-        ],
-        "UserData": {
-          "Fn::Base64": {
-            "Fn::Join": [
-              "",
-              [
-                "#!/bin/bash\n",
-                "export IP=$(hostname --ip-address)\n",
-                "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
-                "[dockerrepo]\n",
-                "name=Docker Repository\n",
-                "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
-                "enabled=1\n",
-                "gpgcheck=1\n",
-                "gpgkey=https://yum.dockerproject.org/gpg\n",
-                "EOF\n",
-                
-                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
-                
-                "yum -y install lvm2\n",
-                "pvcreate /dev/xvdb\n",
-                "vgcreate vg-docker /dev/xvdb\n",
-                "lvcreate -l 95%VG -n data vg-docker\n",
-                "lvcreate -l 5%VG -n metadata vg-docker\n", 
-                
-                "cat > /usr/lib/systemd/system/docker.service <<- 'EOF'\n",
-                "[Unit]\n",
-                "Description=Docker Application Container Engine\n",
-                "Documentation=https://docs.docker.com\n",
-                "After=network.target docker.socket\n",
-                "Requires=docker.socket\n",
-                "\n",
-                "[Service]\n",
-                "Type=notify\n",
-                "EnvironmentFile=-/etc/sysconfig/docker\n",
-                "ExecStart=\n",
-                "ExecStart=/usr/bin/docker daemon $DOCKER_OPTS\n",
-                "MountFlags=slave\n",
-                "LimitNOFILE=1048576\n",
-                "LimitNPROC=1048576\n",
-                "LimitCORE=infinity\n",
-                "TimeoutStartSec=0\n",
-                "\n",
-                "[Install]\n",
-                "WantedBy=multi-user.target\n",
-                "EOF\n",
-
-                "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
-                "EOF\n",
-                
-                "systemctl daemon-reload\n",
-                "systemctl start docker\n",
-                "chkconfig docker on\n",
-                
-                "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
-                "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
-                
-                "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
-
-                "yum -y install git\n",
-
-                "mkdir /adop && cd /adop; git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "cd /adop/adop-docker-compose\n",
-                
-                "docker-compose -f docker-compose.yml pull sensu-uchiwa sensu-api sensu-server sensu-client sensu-rabbitmq sensu-redis\n",
-                "docker-compose -f compose/elk.yml pull\n",
-                
-                "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
-                "\"Reason\" : \"Swarm Node is ready\",",
-                "\"UniqueId\" : \"IDSwarmNode3ID\",",
-                "\"Data\" : \"Done\"}' ",
-                "\"",
-                {
-                  "Ref": "SwarmNodeWaitConditionHandle3"
-                },
-                "\"\n",
-                "\n"
-              ]
-            ]
-          }
-        }
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "eeee439c-93d4-4d5d-904e-8de917cf1f40"
-        }
-      },
-      "DependsOn": [
-        "NATWaitCondition"
-      ]
-    },
-    "SwarmNodeWaitCondition3": {
-      "Type": "AWS::CloudFormation::WaitCondition",
-      "Properties": {
-        "Handle": {
-          "Ref": "SwarmNodeWaitConditionHandle3"
-        },
-        "Timeout": "1500"
-      },
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "68a71f69-06b6-44b1-a4e7-97ca8995297f"
-        }
-      },
-      "DependsOn": [
-        "AdopSwarmNode3"
-      ]
-    },
-    "SwarmNodeWaitConditionHandle3": {
-      "Type": "AWS::CloudFormation::WaitConditionHandle",
-      "Properties": {},
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "7d14e476-f68d-4015-9068-5b65c9d34560"
-        }
-      },
-      "DependsOn": []
     },
     "SwarmProxyWaitCondition": {
       "Type": "AWS::CloudFormation::WaitCondition",
