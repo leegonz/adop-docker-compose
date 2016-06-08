@@ -9,7 +9,7 @@
 ![HomePage](https://raw.githubusercontent.com/bzon/adop-docker-compose/master/img/home-extended.png)
 
 Single Node template AWS Diagram:
-![SingleNodeDiagram](https://raw.githubusercontent.com/bzon/adop-docker-compose/master/img/quickstart-swarm-singlenode.jpg)
+![HomePage](https://raw.githubusercontent.com/bzon/adop-docker-compose/master/img/quickstart-swarm-singlenode.JPG)
 
 Multi Node template AWS Diagram:
-![MultiNodeDiagram](https://raw.githubusercontent.com/bzon/adop-docker-compose/master/img/quickstart-swarm-multinode.jpg)
+![HomePage](https://raw.githubusercontent.com/bzon/adop-docker-compose/master/img/quickstart-swarm-multinode.JPG)
