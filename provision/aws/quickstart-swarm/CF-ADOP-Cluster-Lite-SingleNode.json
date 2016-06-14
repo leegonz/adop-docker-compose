@@ -215,6 +215,7 @@
                 "#!/bin/bash\n",
                 "sleep 5\n",
                 "IP=$(hostname -i)\n",
+                "yum -y update\n",
                 "yum -y install docker\n",
                 "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
@@ -300,7 +301,7 @@
                   {
                     "Ref": "AWS::StackName"
                   },
-                  "SwarmProxy"
+                  "SwarmMaster-OuterProxy"
                 ]
               ]
             }
@@ -322,7 +323,7 @@
                 "gpgkey=https://yum.dockerproject.org/gpg\n",
                 "EOF\n",
                 
-                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.11.1-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
                 
                 "yum -y install lvm2\n",
                 "pvcreate /dev/xvdb\n",
@@ -353,7 +354,7 @@
                 "EOF\n",
 
                 "cat > /etc/sysconfig/docker <<- 'EOF'\n",
-                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --label tier=public --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
+                "DOCKER_OPTS=\"-H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --cluster-store=consul://10.10.1.100:8500/network --cluster-advertise=eth0:2375 --storage-driver=devicemapper --storage-opt dm.datadev=/dev/vg-docker/data --storage-opt dm.metadatadev=/dev/vg-docker/metadata\"\n",
                 "EOF\n",
                 
                 "systemctl daemon-reload\n",
@@ -363,9 +364,8 @@
                 "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
                 
-                "docker run --restart=always --name swarm-leader -d -p 4000:4000 --restart=always swarm manage -H :4000 --replication --advertise ${IP}:4000 consul://10.10.1.100:8500\n",
-                
-                "docker network create --driver overlay --subnet=192.168.0.0/24 adop-network-overlay\n",
+                "docker run --restart=always --name swarm-leader -d -p 4000:4000 --restart=always swarm:1.2.3  --log-level debug manage -H :4000 --replication --advertise ${IP}:4000 consul://10.10.1.100:8500\n",
+                "docker run --restart=always --name outer-proxy -e SWARM_MASTER_HOST=10.10.1.101 -e SWARM_MASTER_PORT=4000 -e TARGET=10.10.2.100 -d -p 80:80 accenture/adop-outer-proxy:0.1.0\n",
                 
                 "yum -y install git\n",
                 
@@ -379,12 +379,14 @@
                 "sleep 10\n",
                 "export PUBLIC_IP=$(curl http://instance-data/latest/meta-data/public-ipv4)\n",
                 "echo \"\n",
-                "export ADOP_HOME=\"/adop/adop-docker-compose/provision/aws/quickstart-swarm\"\n",
+                "export ADOP_HOME=\"/adop/adop-docker-compose\"\n",
                 "export PUBLIC_IP=$PUBLIC_IP\n",
-                "export TARGET_HOST=$PUBLIC_IP\n",
-                "export LOGSTASH_HOST=$PUBLIC_IP\n",
+                "#export TARGET_HOST=$PUBLIC_IP\n",
+                "#export LOGSTASH_HOST=$PUBLIC_IP\n",
+                "export TARGET_HOST=10.10.2.100\n",
+                "export LOGSTASH_HOST=10.10.2.100\n",
                 "export VOLUME_DRIVER=local\n",
-                "export CUSTOM_NETWORK_NAME=adop-network-overlay\n",
+                "export CUSTOM_NETWORK_NAME=adop-network\n",
                 "export AWS_REGION=",{ "Ref": "AWS::Region" },"\n",
                 "export VPC_ID=",{ "Ref": "Vpc" },"\n",
                 "export DEFAULT_PUBLIC_SUBNET_ID=",{ "Ref": "PublicSubnet" },"\n",
@@ -395,20 +397,17 @@
                 "export DEFAULT_KEY_PAIR=",{ "Ref": "KeyName" },"\n",
                 "export INITIAL_ADMIN_USER=",{ "Ref": "AdopUsername" },"\n",
                 "export INITIAL_ADMIN_PASSWORD_PLAIN=",{ "Ref": "AdopUserPassword" },"\n",
+                "export COMPOSE_OVERRIDES='-f etc/volumes/local/default.yml -f etc/logging/syslog/default.yml'\n",
                 "\"> cloudformation_vars.sh\n",
            
                 "source cloudformation_vars.sh\n",
                 "source credentials.generate.sh\n",
                 "source env.config.sh\n",
-                
-                "export COMPOSE_OVERRIDES='-f etc/volumes/local/default.yml'\n",
-                "export DOCKER_HOST=tcp://10.10.2.100:2375\n",
+               
+                "export DOCKER_HOST=tcp://10.10.1.101:4000\n",
+                "docker network create adop-network\n",
                 "docker-compose -f compose/elk.yml up -d\n",
-                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES up -d sensu-uchiwa sensu-api sensu-server sensu-client sensu-rabbitmq sensu-redis\n",
-                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES up -d nexus ldap selenium-hub selenium-node-chrome selenium-node-firefox sonar sonar-mysql ldap-ltb ldap-phpadmin\n",
-                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f compose/gitlab.yml -f adop-overrides.yml up -d jenkins gitlab gerrit gerrit-mysql jenkins-slave\n",
-                "export DOCKER_HOST=\n",
-                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f adop-overrides.yml up -d proxy\n",
+                "docker-compose -f docker-compose.yml $COMPOSE_OVERRIDES -f adop-overrides.yml -f compose/gitlab.yml up -d\n",
                 "sleep 10\n",
                 "./gitlab-load-platform.sh ",{ "Ref": "AdopWorkspace" },"\n",
                 "docker restart proxy\n",
@@ -501,7 +500,7 @@
                   {
                     "Ref": "AWS::StackName"
                   },
-                  "SwarmNodeAllTools"
+                  "SwarmNode"
                 ]
               ]
             }
@@ -523,7 +522,7 @@
                 "gpgkey=https://yum.dockerproject.org/gpg\n",
                 "EOF\n",
                 
-                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.10.3-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
+                "until [[ $(rpm -qa docker-engine | wc -l) == 1 ]]; do yum -y install docker-engine-1.11.1-1.el7.centos.x86_64; echo 'This is a checker that waits until docker is successfully installed. This is a fix for an existing issue where yum repo is not ready yet. Sleeping for 5 seconds..'; sleep 5; done\n",
                 
                 "yum -y install lvm2\n",
                 "pvcreate /dev/xvdb\n",
@@ -564,16 +563,9 @@
                 "curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose\n",
                 "chmod +x /usr/local/bin/docker-compose && ln -sv /usr/local/bin/docker-compose /usr/bin/docker-compose\n",
                 
-                "docker run -d --restart=always --name swarm-node swarm join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
+                "docker run -d --restart=always --name swarm-node swarm:1.2.3 --log-level debug join --advertise=${IP}:2375 consul://10.10.1.100:8500\n",
 
                 "yum -y install git\n",
-                "mkdir /adop && cd /adop\n",
-                "git clone https://github.com/bzon/adop-docker-compose.git\n",
-                "git clone https://github.com/bzon/pdc-adop-cartridge-loader.git && mv /adop/pdc-adop-cartridge-loader/*.* /adop/adop-docker-compose\n",
-                "cd /adop/adop-docker-compose\n",
-                
-                "docker-compose -f compose/elk.yml\n",
-                "docker-compose -f docker-compose.yml -f compose/gitlab.yml -f adop-overrides.yml pull\n",
                 
                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                 "\"Reason\" : \"Swarm Node is ready\",",
@@ -895,6 +887,18 @@
             "FromPort": "25826",
             "IpProtocol": "tcp",
             "ToPort": "25826"
+          },
+          {
+            "CidrIp": "10.10.0.0/16",
+            "FromPort": "12201",
+            "IpProtocol": "udp",
+            "ToPort": "12201"
+          },
+          {
+            "CidrIp": "10.10.0.0/16",
+            "FromPort": "5000",
+            "IpProtocol": "tcp",
+            "ToPort": "5000"
           },
           {
             "CidrIp": "0.0.0.0/0",
