@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Adop Core Generation 5 CloudFormation Swarm Stack (Single Swarm Node)",
+  "Description": "Adop Core Generation 5 CloudFormation Swarm Stack (1 Swarm Master 1 Swarm Node)",
   "Mappings": {
     "RegionMap": {
       "eu-central-1": {
